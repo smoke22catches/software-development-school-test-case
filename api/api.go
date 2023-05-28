@@ -1,13 +1,10 @@
 package api
 
 import (
-	"encoding/json"
-	"net/http"
-	"strconv"
+	"github.com/gin-gonic/gin"
 
 	"software-development-school-test-case/emails"
-
-	"github.com/gin-gonic/gin"
+	"software-development-school-test-case/price"
 )
 
 func StartApi() {
@@ -20,32 +17,13 @@ func StartApi() {
 
 func GetBtcPriceInUah(c *gin.Context) {
 	c.Header("Access-Control-Allow-Origin", "*")
-	var responseData BtcPriceResponse
+	btcPrice, err := price.GetBtcPriceInUah()
 
-	// Get request to coinbase api
-	response, err := http.Get("https://api.coinbase.com/v2/prices/spot?base=BTC&currency=UAH")
 	if err != nil {
-		c.IndentedJSON(400, -1)
-		return
+		c.IndentedJSON(400, err.Error())
 	}
 
-	// decode api response
-	decoder := json.NewDecoder(response.Body)
-	decoder.DisallowUnknownFields()
-	err = decoder.Decode(&responseData)
-	if err != nil {
-		c.IndentedJSON(400, -1)
-		return
-	}
-
-	// get price from response
-	price, err := strconv.ParseFloat(responseData.Data.Amount, 64)
-	if err != nil {
-		c.IndentedJSON(400, -1)
-		return
-	}
-
-	c.IndentedJSON(200, price)
+	c.IndentedJSON(200, btcPrice)
 }
 
 func AddEmailToSubscriptionList(c *gin.Context) {
@@ -74,33 +52,17 @@ func AddEmailToSubscriptionList(c *gin.Context) {
 	c.IndentedJSON(200, "Email added")
 }
 
-func NotifySubscribersAboutBtcPrice(c *gin.Context) {}
+func NotifySubscribersAboutBtcPrice(c *gin.Context) {
+	c.Header("Access-Control-Allow-Origin", "*")
 
-// structure of response from coinbase api
-type BtcPriceResponse struct {
-	Data struct {
-		Base     string `json:"base"`
-		Currency string `json:"currency"`
-		Amount   string `json:"amount"`
-	} `json:"data"`
-}
-
-func (r *BtcPriceResponse) UnmarshalJSON(data []byte) error {
-	var response interface{}
-	err := json.Unmarshal(data, &response)
+	err := emails.SendBtcPriceToSubscribers()
 
 	if err != nil {
-		return err
+		c.IndentedJSON(500, err.Error())
+		return
 	}
 
-	responseMap := response.(map[string]interface{})
-	responseData := responseMap["data"].(map[string]interface{})
-
-	r.Data.Base = responseData["base"].(string)
-	r.Data.Currency = responseData["currency"].(string)
-	r.Data.Amount = responseData["amount"].(string)
-
-	return nil
+	c.IndentedJSON(200, "Emails sent")
 }
 
 // structure of request to subscribe

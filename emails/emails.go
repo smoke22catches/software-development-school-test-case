@@ -2,9 +2,12 @@ package emails
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"sort"
 	"strings"
+
+	"software-development-school-test-case/price"
 )
 
 const emailSubscriptionsFileName = "emails.txt"
@@ -29,6 +32,26 @@ func AddEmailToSubscriptionList(email string) (emailAdded bool, err error) {
 		return false, err
 	}
 	return true, nil
+}
+
+func SendBtcPriceToSubscribers() error {
+	btcPrice, err := price.GetBtcPriceInUah()
+
+	if err != nil {
+		return err
+	}
+
+	subscriptions, err := getOrCreateSubscriptionsList()
+
+	if err != nil {
+		return err
+	}
+
+	for _, email := range subscriptions {
+		fmt.Printf("Send email to %s with price %f\n", email, btcPrice)
+	}
+
+	return nil
 }
 
 // get subscriptions list from file, if it doesn't exist then create it
